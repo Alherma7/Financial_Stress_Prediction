@@ -78,21 +78,44 @@ EDA and feature engineering steps done so far live in
 - Validated the improvement: adding these trend features to the baseline
   Logistic Regression improved the validation combined score from **0.326
   to 0.310** (lower is better), with both Log Loss and AUC improving.
-
-Not yet done: `build_monthly_trend_features()` is implemented and validated
-in the notebook, but **not yet wired into `src/train.py`'s default pipeline**
-(see next steps below).
+- Wired `build_monthly_trend_features()` (top 13 families, see
+  `config.TOP_TREND_FAMILIES`) into `src/train.py`'s default pipeline.
+  Running `python -m src.train` now reproduces the notebook's validation:
+  combined score **0.30993**, Log Loss 0.36546, ROC-AUC 0.77337.
+- Compared Logistic Regression vs LightGBM on the same (baseline + trend)
+  feature set (`notebooks/01_eda_trends.ipynb`, Step 4) — LightGBM improved
+  the combined score from 0.30993 to **0.22580** (Log Loss 0.29016, ROC-AUC
+  0.87075), so it replaced Logistic Regression as the default model in
+  `src/train.py` (`model.build_lightgbm_pipeline()`).
+- Replaced the single train/validation split in `src/train.py` with
+  Stratified K-Fold cross-validation (`evaluate.cross_validate_score()`,
+  `config.CV_FOLDS = 5`) for a more robust score estimate, following the
+  Home Credit Default Risk 1st place solution (see `RESOURCES.md`). Result:
+  combined score **0.21829 ± 0.00529** (Log Loss 0.28360 ± 0.00482, ROC-AUC
+  0.87967 ± 0.00630) — consistent with the single-split estimate, now with
+  an uncertainty band.
+- Wrapped LightGBM in `CalibratedClassifierCV` (sigmoid/Platt scaling), per
+  Niculescu-Mizil & Caruana (ICML 2005) — boosted trees rank well but
+  produce poorly calibrated probabilities, which hurts Log Loss (60% of the
+  score). Now the default model in `src/train.py`
+  (`model.build_lightgbm_calibrated_pipeline()`). Result: combined score
+  **0.21333 ± 0.00420** (Log Loss 0.27683 ± 0.00359, ROC-AUC 0.88192 ±
+  0.00532) — improves on the uncalibrated 0.21829 on both Log Loss and AUC.
 
 ## Next steps (pending)
 
 - [x] Inspect the actual columns in `Train.csv` (confirm the monthly
       m1_...m6_ prefixes) and implement `build_monthly_trend_features()`
       in `src/features.py`.
-- [ ] Wire `build_monthly_trend_features()` into `src/train.py`'s default
+- [x] Wire `build_monthly_trend_features()` into `src/train.py`'s default
       pipeline (currently only used/validated in the notebook).
-- [ ] Try LightGBM/XGBoost as an alternative to Logistic Regression
+- [x] Try LightGBM/XGBoost as an alternative to Logistic Regression
       (placeholder already left in `src/model.py`).
-- [ ] Try probability calibration (`CalibratedClassifierCV`) to
+- [x] Try probability calibration (`CalibratedClassifierCV`) to
       improve Log Loss.
-- [ ] Cross-validation (stratified K-Fold) instead of a single split,
+- [x] Cross-validation (stratified K-Fold) instead of a single split,
       for a more robust estimate of the combined score.
+- [ ] Tune LightGBM hyperparameters (`n_estimators`, `learning_rate`,
+      `num_leaves`) instead of the library defaults.
+- [ ] Explore additional feature engineering beyond the current top 13
+      trend families (`config.TOP_TREND_FAMILIES`).

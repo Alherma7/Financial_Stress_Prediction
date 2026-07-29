@@ -28,6 +28,24 @@ All links were verified as accessible on 2026-07-28.
   Why: relevant for completing `build_monthly_trend_features()` in `src/features.py`
   (numerical and interaction feature chapters).
 
+## Papers and official documentation
+
+- **"Predicting Good Probabilities with Supervised Learning"** — Niculescu-Mizil & Caruana
+  (ICML 2005). https://www.cs.cornell.edu/~caruana/niculescu.scldbst.crc.rev4.pdf
+  Why: empirically shows that boosted trees (like LightGBM/XGBoost) push probability mass
+  away from 0 and 1, producing a characteristic sigmoid-shaped distortion in predicted
+  probabilities — i.e. good ranking (AUC) but poorly calibrated output. They show Platt
+  scaling (sigmoid) and Isotonic Regression correct this, and that calibrated boosted trees
+  give the best probabilities of the methods they tested. Directly justifies using
+  `CalibratedClassifierCV(method="sigmoid")` on top of `build_lightgbm_pipeline()` to
+  improve Log Loss (60% of this competition's score) without hurting ROC-AUC.
+
+- **scikit-learn: Probability calibration (user guide)**
+  https://scikit-learn.org/stable/modules/calibration.html
+  Why: official reference for `CalibratedClassifierCV`'s `sigmoid` (Platt) vs `isotonic`
+  methods and the `cv` parameter (internal CV split used to fit the calibrator) — used
+  directly in `src/model.py::build_lightgbm_calibrated_pipeline()`.
+
 ## Comparable competitions (Kaggle) and what they offer
 
 Same type of problem: time-windowed customer features + financial risk target
@@ -67,6 +85,6 @@ Same type of problem: time-windowed customer features + financial risk target
 |---|---|
 | Trend/delta/ratio features (Amex, Home Credit) | `src/features.py::build_monthly_trend_features()` (pending) |
 | Feature engineering > tuning (Home Credit) | Prioritize EDA + features before tuning hyperparameters |
-| LightGBM/XGBoost ensembles | `src/model.py` (placeholder already left) |
-| Probability calibration | `CalibratedClassifierCV`, already noted in README as pending |
+| LightGBM/XGBoost ensembles | `src/model.py::build_lightgbm_pipeline()` (done — now the default model in `src/train.py`, combined score 0.310 -> 0.226) |
+| Probability calibration (Niculescu-Mizil & Caruana; sklearn docs) | `src/model.py::build_lightgbm_calibrated_pipeline()` |
 | Stratified K-Fold | Replace the single split in `src/train.py` |
