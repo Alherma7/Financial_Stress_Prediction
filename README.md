@@ -101,6 +101,22 @@ EDA and feature engineering steps done so far live in
   (`model.build_lightgbm_calibrated_pipeline()`). Result: combined score
   **0.21333 ± 0.00420** (Log Loss 0.27683 ± 0.00359, ROC-AUC 0.88192 ±
   0.00532) — improves on the uncalibrated 0.21829 on both Log Loss and AUC.
+- Explored min/max, recency-weighted mean (Home Credit "weighted moving
+  averages" lesson), and net-flow (deposit + received - withdraw, Zheng &
+  Casari interaction-feature technique) trend features on top of the
+  existing top-13 trend families (`src/features.py::build_monthly_trend_features()`,
+  `build_net_flow_features()` — see
+  `docs/superpowers/specs/2026-07-30-additional-trend-features-design.md`).
+  Validated in `notebooks/01_eda_trends.ipynb` (Step 6): combined score
+  **0.21427 ± 0.00352** (Log Loss 0.27736 ± 0.00306, ROC-AUC 0.88035 ±
+  0.00444) vs the documented baseline **0.21333 ± 0.00420** — slightly
+  worse on both Log Loss and ROC-AUC, though the delta is smaller than one
+  standard deviation of noise. Per this project's practice of only
+  adopting changes that hold or improve on both metrics, **not wired into
+  `src/train.py`**; the functions remain available in `src/features.py`
+  for future experiments (e.g. isolating which of the three techniques
+  helps vs. hurts, or revisiting after hyperparameter tuning) but are not
+  part of the default pipeline.
 
 ## Next steps (pending)
 
@@ -117,5 +133,5 @@ EDA and feature engineering steps done so far live in
       for a more robust estimate of the combined score.
 - [ ] Tune LightGBM hyperparameters (`n_estimators`, `learning_rate`,
       `num_leaves`) instead of the library defaults.
-- [ ] Explore additional feature engineering beyond the current top 13
+- [x] Explore additional feature engineering beyond the current top 13
       trend families (`config.TOP_TREND_FAMILIES`).

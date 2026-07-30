@@ -15,7 +15,7 @@ The idea behind build_monthly_trend_features is to capture signals such as:
 
 import pandas as pd
 import numpy as np
-
+from . import config
 
 def get_feature_columns(df: pd.DataFrame, id_col: str, target_col: str) -> list:
     """Return the feature columns, excluding ID and target."""
@@ -49,9 +49,45 @@ def impute_missing(X_encoded: pd.DataFrame, test_encoded: pd.DataFrame):
         X_encoded[col] = X_encoded[col].fillna(median_value)
         test_encoded[col] = test_encoded[col].fillna(median_value)
     return X_encoded, test_encoded
+def _linear_recency_weights(n: int) -> np.ndarray:
+    """
+    Linearly decreasing weights, index 0 (most recent month) heaviest,
+    normalized to sum to 1. E.g. n=6 -> [6, 5, 4, 3, 2, 1] / 21.
 
+    Source: Home Credit Default Risk 1st place solution used "weighted
+    moving averages on time-based features" (see RESOURCES.md) without
+    specifying exact weights; linear decay is this project's 
+    implementation choice, weighting months closer to the 30-day
+    prediction window more heavily (monthly_prefixes[0] = m1 = most_recent).
+    """
+    weights = np.arange(n, 0, -1, dtype=float)
+    return weights / weights.sum()
 
-def build_monthly_trend_features(df: pd.DataFrame, families: list,  monthly_prefixes=("m1", "m2", "m3", "m4", "m5", "m6")) -> pd.DataFrame:
+def _trend_stats(monthly_values: pd.DataFrame, monthly_prefixes) -> dict:
+    """
+    Shared trend statistics for a monthly values series (one column per
+    entry in monthly_prefixes, ordered most-recent -> oldest, i.e. column 0
+    corresponds to monthly_prefixes[0] = m1 = most recent).
+    """
+    most_recent = monthly_values.iloc[:, 0]
+    oldest = monthly_values.iloc[:,-1]
+    mean_6m = monthly_values.mean(axis=1)
+
+    weights = _linear_recency_weights(len(monthly_prefixes))
+    weighted_mean_6m = (monthly_values * weights).sum(axis=1)
+
+    return {
+        "delta_m1_m6": most_recent - oldest,
+        "mean_6m": mean_6m,
+        "std_6m": monthly_values.std(axis=1),
+        "min_6m": monthly_values.min(axis=1),
+        "max_6m": monthly_values.max(axis=1),
+        "ratio_m1_mean": (most_recent / mean_6m).replace([np.inf, -np.inf], np.nan),
+        "weighted_mean_6m": weighted_mean_6m
+    }
+
+def build_monthly_trend_features(df: pd.DataFrame, families: list, monthly_prefixes=("m1","m2","m3",
+"m4","m5", "m6")) -> pd.DataFrame:
     """
     Build trend features per variable family across the 6-month window.
 
@@ -64,23 +100,36 @@ def build_monthly_trend_features(df: pd.DataFrame, families: list,  monthly_pref
 
     Note: monthly_prefixes is ordered most-recent -> oldest (m1 = most recent,
     m6 = oldest, per data_dictionary.csv), so monthly_prefixes[0] is "most
-    recent" and monthly_prefixes[-1] is "oldest". 
+    recent" and monthly_prefixes[-1] is "oldest".
     """
     trend_df = pd.DataFrame(index=df.index)
-    for fam in families: 
+    for fam in families:
         cols = [f"{m}_{fam}" for m in monthly_prefixes]
         monthly_values = df[cols]
-
-        most_recent = df[f"{monthly_prefixes[0]}_{fam}"]
-        oldest = df[f"{monthly_prefixes[-1]}_{fam}"]
-        mean_6m = monthly_values.mean(axis=1)
-        std_6m = monthly_values.std(axis=1)
-
-        trend_df[f"{fam}_delta_m1_m6"] = most_recent - oldest
-        trend_df[f"{fam}_mean_6m"] = mean_6m
-        trend_df[f"{fam}_std_6m"] = std_6m
-         # guard against dividing by a zero mean (e.g. a customer with no
-        # deposits at all across the window)
-        trend_df[f"{fam}_ratio_m1_mean"] = (most_recent / mean_6m).replace([np.inf, -np.inf], np.nan)
-
+        stats = _trend_stats(monthly_values, monthly_prefixes)
+        for stat_name, series in stats.items():
+            trend_df[f"{fam}_{stat_name}"] = series
     return trend_df
+
+def build_net_flow_features(df: pd.DataFrame, monthly_prefixes=("m1","m2","m3","m4","m5","m6"),
+                            inflow_cols=None, outflow_cols=None) -> pd.DataFrame:
+    """
+    Net cash flow (inflow - outflow) per month, then the same trend
+    statistics used for individual families (see _trend_stats).
+
+    Source: Zheng & Casari, "Feature Engineering for Machine Learning"
+    (see RESOURCES.md) -- an interaction feature across families rather
+    than within one, capturing whether a customer is spending down more
+    than they bring in, which is the definition of liquidity stress.
+    """ 
+    inflow_cols = inflow_cols if inflow_cols is not None else config.NET_FLOW_INFLOW_COLS
+    outflow_cols = outflow_cols if outflow_cols is not None else config.NET_FLOW_OUTFLOW_COLS
+
+    monthly_net_flow = pd.DataFrame(index=df.index)
+    for m in monthly_prefixes:
+        inflow = sum(df[f"{m}_{c}"] for c in inflow_cols)
+        outflow = sum(df[f"{m}_{c}"] for c in outflow_cols)
+        monthly_net_flow[m] = inflow - outflow
+
+    stats = _trend_stats(monthly_net_flow, monthly_prefixes)
+    return pd.DataFrame({f"net_flow_{name}": series for name, series in stats.items()}, index=df.index)

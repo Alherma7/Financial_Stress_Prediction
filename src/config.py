@@ -43,3 +43,11 @@ TOP_TREND_FAMILIES = [
     "received_volume", "withdraw_highest_amount", "withdraw_total_value",
     "received_senders", "withdraw_agents", "received_highest_amount",
 ]
+
+# --- Net flow features ---
+# Inflow minus outflow per month, using columns already in TOP_TREND_FAMILIES.
+# Source: Zheng & Casari, "Feature Engineering for Machine Learning" (see
+# RESOURCES.md), interaction features across variables -- net inflow vs
+# outflow maps directly onto the definition of liquidity stress.
+NET_FLOW_INFLOW_COLS = ["deposit_total_value", "received_total_value"]
+NET_FLOW_OUTFLOW_COLS = ["withdraw_total_value"]
