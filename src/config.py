@@ -51,3 +51,14 @@ TOP_TREND_FAMILIES = [
 # outflow maps directly onto the definition of liquidity stress.
 NET_FLOW_INFLOW_COLS = ["deposit_total_value", "received_total_value"]
 NET_FLOW_OUTFLOW_COLS = ["withdraw_total_value"]
+
+# --- Tuned LightGBM hyperparameters ---
+# Chosen by random search (see notebooks/01_eda_trends.ipynb Step 7 and
+# RESOURCES.md: LightGBM "Parameters Tuning" docs, Bergstra & Bengio JMLR
+# 2012). Combined score 0.20752 vs 0.21308 same-run baseline (both Log
+# Loss and ROC-AUC improved).
+TUNED_LGBM_PARAMS = {
+    "n_estimators": 600,
+    "learning_rate": 0.041141,
+    "num_leaves": 31,
+}

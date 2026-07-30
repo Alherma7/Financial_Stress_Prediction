@@ -117,6 +117,23 @@ EDA and feature engineering steps done so far live in
   for future experiments (e.g. isolating which of the three techniques
   helps vs. hurts, or revisiting after hyperparameter tuning) but are not
   part of the default pipeline.
+- Tuned LightGBM's `n_estimators`, `learning_rate`, and `num_leaves` via
+  random search (20 broad trials + 15 refined trials around the best
+  region, see `notebooks/01_eda_trends.ipynb` Step 7 — sources: LightGBM
+  "Parameters Tuning" docs, Bergstra & Bengio JMLR 2012, both in
+  `RESOURCES.md`; design in
+  `docs/superpowers/specs/2026-07-30-lightgbm-hyperparameter-tuning-design.md`).
+  Same-run baseline (library defaults, current feature set): combined
+  score 0.21308 ± 0.00488 (Log Loss 0.27639 ± 0.00435, ROC-AUC 0.88188 ±
+  0.00578). Best trial (`n_estimators=600`, `learning_rate=0.0411`,
+  `num_leaves=31`): combined score **0.20752 ± 0.00332** (Log Loss
+  0.27039 ± 0.00291, ROC-AUC 0.88677 ± 0.00402) — improves on both Log
+  Loss and ROC-AUC, so wired into `src/train.py`
+  (`config.TUNED_LGBM_PARAMS`). The refined search only found a further
+  0.0006 improvement over the broad search's best, within noise —
+  tuning has converged on these 3 parameters; further gains likely need
+  `class_weight="balanced"`, model ensembling (LightGBM + XGBoost, see
+  RESOURCES.md), or more feature engineering, not more tuning.
 
 ## Next steps (pending)
 
@@ -131,7 +148,7 @@ EDA and feature engineering steps done so far live in
       improve Log Loss.
 - [x] Cross-validation (stratified K-Fold) instead of a single split,
       for a more robust estimate of the combined score.
-- [ ] Tune LightGBM hyperparameters (`n_estimators`, `learning_rate`,
+- [x] Tune LightGBM hyperparameters (`n_estimators`, `learning_rate`,
       `num_leaves`) instead of the library defaults.
 - [x] Explore additional feature engineering beyond the current top 13
       trend families (`config.TOP_TREND_FAMILIES`).

@@ -41,7 +41,7 @@ def print_scores(scores: dict, label: str = "Validation"):
     print(f"ROC-AUC       : {scores['roc_auc']:.5f}")
     print(f"Combined score: {scores['combined_score']:.5f} (lower is better)")
 
-def cross_validate_score(pipeline_builder, X, y, n_splits=5, random_state=None) -> dict:
+def cross_validate_score(pipeline_builder, X, y, n_splits=5, random_state=None, verbose=True) -> dict:
     """
     Stratified K-Fold cross-validation of the competition's combined score. 
 
@@ -53,6 +53,9 @@ def cross_validate_score(pipeline_builder, X, y, n_splits=5, random_state=None) 
     pipeline_builder must be a zero-argument callable returning a fresh,
     unfitted pipeline (e.g. `lambda: model.build_lightgbm_pipeline()`), so
     each fold trains its own model from scratch.
+
+    Set verbose=False to suppress the per-fold print_scores() output (e.g.
+    when calling this many times in a hyperparameter search).
     """
     skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
 
@@ -66,7 +69,8 @@ def cross_validate_score(pipeline_builder, X, y, n_splits=5, random_state=None) 
         val_pred_prob = pipeline.predict_proba(X_val)[:, 1]
 
         scores = combined_score(y_val, val_pred_prob)
-        print_scores(scores, label=f"Fold {fold}/{n_splits}")
+        if verbose:
+            print_scores(scores, label=f"Fold {fold}/{n_splits}")
         fold_scores.append(scores)
     summary = {}
     for key in ("log_loss", "roc_auc", "combined_score"):

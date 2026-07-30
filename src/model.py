@@ -33,7 +33,7 @@ def build_logreg_pipeline(class_weight=None):
     ])
 
 
-def build_lightgbm_pipeline(class_weight=None):
+def build_lightgbm_pipeline(class_weight=None, n_estimators=100, learning_rate=0.1, num_leaves=31):
     """
     LightGBM baseline, as an alternative to Logistic Regression.
 
@@ -42,16 +42,25 @@ def build_lightgbm_pipeline(class_weight=None):
     RESOURCES.md) -- same problem shape as this one (time-windowed customer
     features + financial risk target). Tree-based models don't need feature
     scaling, so no StandardScaler here (unlike build_logreg_pipeline).
+
+    n_estimators/learning_rate/num_leaves default to LightGBM's own library
+    defaults. See config.TUBED_LGBM_PARAMS for the values chosen by random
+    search (LightGBM docs "Parameters Tuning"; Bergstra & Bengio, JMLR 2012
+    -- see RESOURCES.md). 
     """
     from lightgbm import LGBMClassifier
 
     return LGBMClassifier(
         class_weight=class_weight,
+        n_estimators=n_estimators,
+        learning_rate=learning_rate,
+        num_leaves=num_leaves,
         random_state=config.RANDOM_STATE,
         verbose=-1,
     )
 
-def build_lightgbm_calibrated_pipeline(class_weight=None, method="sigmoid", cv=3):
+def build_lightgbm_calibrated_pipeline(class_weight=None, method="sigmoid", cv=3,
+                                       n_estimators=100, learning_rate=0.1, num_leaves=31):
     """
     LightGBM wrapped in probability calibration. 
 
@@ -63,7 +72,12 @@ def build_lightgbm_calibrated_pipeline(class_weight=None, method="sigmoid", cv=3
     directly targets that weight without affecting ranking (ROC-AUC).
     """
     return CalibratedClassifierCV(
-        estimator=build_lightgbm_pipeline(class_weight=class_weight),
+        estimator=build_lightgbm_pipeline(
+            class_weight=class_weight,
+            n_estimators=n_estimators,
+            learning_rate=learning_rate,
+            num_leaves=num_leaves,
+            ),
         method=method,
         cv=cv,
     )

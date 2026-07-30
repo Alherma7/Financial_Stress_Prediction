@@ -35,7 +35,7 @@ def main():
     # 3-5. Stratified K-Fold cross-validation (more robust than a single
     # split -- see RESOURCES.md, Home Credit 1st place solution)
     cv_summary = evaluate.cross_validate_score(
-        lambda: model.build_lightgbm_calibrated_pipeline(class_weight=None),
+        lambda: model.build_lightgbm_calibrated_pipeline(class_weight=None, **config.TUNED_LGBM_PARAMS),
         X_encoded, y,
         n_splits=config.CV_FOLDS,
         random_state=config.RANDOM_STATE,
@@ -43,7 +43,7 @@ def main():
     evaluate.print_cv_summary(cv_summary)
 
     # 6. Retrain on all the data and predict on test
-    pipeline = model.build_lightgbm_calibrated_pipeline(class_weight=None)
+    pipeline = model.build_lightgbm_calibrated_pipeline(class_weight=None, **config.TUNED_LGBM_PARAMS)
     pipeline.fit(X_encoded, y)
     assert list(test_encoded.columns) == list(X_encoded.columns), \
         "Train and test columns do not match after encoding."
