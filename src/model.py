@@ -117,3 +117,33 @@ def build_ensemble_pipeline(class_weight=None, method="sigmoid", cv=3, weights=N
         cv=cv,
     )
     return VotingClassifier(estimators=[("lgbm", lgbm), ("xgb", xgb)], voting="soft", weights=weights)
+
+
+def build_xgboost_calibrated_pipeline(method="sigmoid", cv=3,
+                                       n_estimators=100, learning_rate=0.3, max_depth=6):
+    """
+    Calibrated XGBoost, evaluated standalone (not as part of the ensemble).
+
+    Source: XGBoost official "Notes on Parameter Tuning" docs (RESOURCES.md)
+    -- n_estimators/learning_rate/max_depth are the primary tuning knobs,
+    analogous to LightGBM's n_estimators/learning_rate/num_leaves. Calibrated
+    the same way as LightGBM (Niculescu-Mizil & Caruana, ICML 2005) so this
+    round's baseline and trials are all comparably calibrated.
+
+    Defaults (n_estimators=100, learning_rate=0.3, max_depth=6) are
+    XGBoost's own library defaults, so existing callers keep working
+    unchanged if these aren't passed. See config.TUNED_XGBOOST_PARAMS (if
+    adopted) for the random search's winning values.
+    """
+    from xgboost import XGBClassifier
+
+    return CalibratedClassifierCV(
+        estimator=XGBClassifier(
+            n_estimators=n_estimators,
+            learning_rate=learning_rate,
+            max_depth=max_depth,
+            random_state=config.RANDOM_STATE,
+        ),
+        method=method,
+        cv=cv,
+    )
