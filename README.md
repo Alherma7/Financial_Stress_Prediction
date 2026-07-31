@@ -164,6 +164,22 @@ EDA and feature engineering steps done so far live in
   `docs/superpowers/specs/2026-07-31-lgbm-xgboost-ensemble-design.md`
   "Out of scope"); feature engineering (customer-profile interactions,
   remaining 16 trend families) is also still untried.
+- Weighted the LightGBM + XGBoost ensemble toward LightGBM
+  (`notebooks/01_eda_trends.ipynb` Step 10 — grid search over
+  LightGBM/XGBoost weight ratios; source: scikit-learn Voting Classifier
+  docs, already in `RESOURCES.md`; design in
+  `docs/superpowers/specs/2026-07-31-weighted-ensemble-design.md`). Best
+  weighted ratio tried, LightGBM=0.9: combined score 0.20831 ± 0.00328
+  (Log Loss 0.27166 ± 0.00283, ROC-AUC 0.88672 ± 0.00410), still worse
+  than plain LightGBM (0.20752 ± 0.00332, Log Loss 0.27039 ± 0.00291,
+  ROC-AUC 0.88677 ± 0.00402) — so **not adopted**; `src/train.py` keeps
+  the single tuned LightGBM pipeline. The score degraded monotonically
+  as XGBoost's weight increased (0.20831 → 0.20946 → 0.21094 → 0.21275 →
+  0.21489 for LightGBM weights 0.9 → 0.8 → 0.7 → 0.6 → 0.5), so no weight
+  in this grid helps — ensembling with this untuned XGBoost doesn't pay
+  off at any ratio tried. Remaining untried candidates: tuning XGBoost's
+  hyperparameters before ensembling, or further feature engineering
+  (customer-profile interactions, remaining 16 trend families).
 
 ## Next steps (pending)
 
