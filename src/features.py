@@ -111,6 +111,29 @@ def build_monthly_trend_features(df: pd.DataFrame, families: list, monthly_prefi
             trend_df[f"{fam}_{stat_name}"] = series
     return trend_df
 
+def build_production_features(train_df: pd.DataFrame, test_df: pd.DataFrame):
+    """
+    The current production feature set: one-hot encoding + the top trend
+    families (config.TOP_TREND_FAMILIES), imputed with the train median.
+
+    Combines encode_features() + build_monthly_trend_features() +
+    impute_missing() -- the same three-step sequence used by both
+    src/train.py and the notebook's validation cells -- so that sequence
+    only needs to be written once. Callers who only need train features
+    (e.g. a notebook cell scoring `train` alone) can pass `test_df` anyway
+    and ignore the second return value.
+    """
+    feature_cols = get_feature_columns(train_df, config.ID_COL, config.TARGET)
+    X_encoded, test_encoded = encode_features(train_df, test_df, feature_cols)
+
+    trend_train = build_monthly_trend_features(train_df, config.TOP_TREND_FAMILIES)
+    trend_test = build_monthly_trend_features(test_df, config.TOP_TREND_FAMILIES)
+    X_encoded = pd.concat([X_encoded, trend_train], axis=1)
+    test_encoded = pd.concat([test_encoded, trend_test], axis=1)
+
+    return impute_missing(X_encoded, test_encoded)
+
+
 def build_net_flow_features(df: pd.DataFrame, monthly_prefixes=("m1","m2","m3","m4","m5","m6"),
                             inflow_cols=None, outflow_cols=None) -> pd.DataFrame:
     """

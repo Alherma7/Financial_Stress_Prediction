@@ -6,8 +6,6 @@ Usage:
 """
 
 
-import pandas as pd
-
 from . import config, data, features, model, evaluate
 
 
@@ -16,18 +14,10 @@ def main():
     train, test = data.load_raw_data()
     sample_submission = data.make_sample_submission(test)
 
-    # 2. Prepare features
-    feature_cols = features.get_feature_columns(train, config.ID_COL, config.TARGET)
-    X_encoded, test_encoded = features.encode_features(train, test, feature_cols)
-
-    # 2b. Trend features (validated in notebooks/01_eda_trends.ipynb, cell 6:
-    # improved combined score from 0.326 to 0.310)
-    trend_train = features.build_monthly_trend_features(train, config.TOP_TREND_FAMILIES)
-    trend_test = features.build_monthly_trend_features(test, config.TOP_TREND_FAMILIES)
-    X_encoded = pd.concat([X_encoded, trend_train], axis=1)
-    test_encoded = pd.concat([test_encoded, trend_test], axis=1)
-
-    X_encoded, test_encoded = features.impute_missing(X_encoded, test_encoded)
+    # 2. Prepare features: one-hot encoding + trend features (validated in
+    # notebooks/01_eda_trends.ipynb, cell 6: improved combined score from
+    # 0.326 to 0.310), imputed with the train median.
+    X_encoded, test_encoded = features.build_production_features(train, test)
 
     y = train[config.TARGET]
 
