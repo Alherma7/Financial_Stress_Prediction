@@ -164,6 +164,26 @@ EDA and feature engineering steps done so far live in
   `docs/superpowers/specs/2026-07-31-lgbm-xgboost-ensemble-design.md`
   "Out of scope"); feature engineering (customer-profile interactions,
   remaining 16 trend families) is also still untried.
+- Tuned XGBoost's `n_estimators`, `learning_rate`, and `max_depth` via
+  random search, evaluated standalone (`notebooks/01_eda_trends.ipynb`
+  Step 11 — sources: XGBoost "Notes on Parameter Tuning" docs, Bergstra &
+  Bengio JMLR 2012, both in `RESOURCES.md`; design in
+  `docs/superpowers/specs/2026-07-31-xgboost-hyperparameter-tuning-design.md`).
+  Same-run baseline (library defaults): combined score 0.23380 ± 0.00420
+  (Log Loss 0.30229 ± 0.00331, ROC-AUC 0.86895 ± 0.00611). Stopped early
+  by the user after 11 of 20 trials, since the best partial trials
+  (`n_estimators=800, learning_rate=0.0761, max_depth=4` → 0.22328, plus
+  three others clustering around 0.223–0.225) were clearly not going to
+  approach the single-LightGBM baseline (0.20752) or even the previously
+  rejected ensemble attempts (0.20831–0.21489) — the search was already
+  plateauing well short of closing that gap. **Not adopted**; no
+  `config.py` change (no complete "best trial" to save, and it wouldn't
+  be used regardless — ensembling is deprioritized following this
+  result). Remaining untried candidate: feature engineering
+  (customer-profile interactions — `segment` shows the strongest
+  untapped categorical signal in the dataset, 19.0%/17.2%/12.6% target
+  rate for HVC/LVC/MVC vs. a ~15% base rate — or the remaining 16 trend
+  families).
 - Weighted the LightGBM + XGBoost ensemble toward LightGBM
   (`notebooks/01_eda_trends.ipynb` Step 10 — grid search over
   LightGBM/XGBoost weight ratios; source: scikit-learn Voting Classifier
