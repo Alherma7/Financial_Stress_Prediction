@@ -237,6 +237,8 @@ EDA and feature engineering steps done so far live in
 - [x] Explore additional feature engineering beyond the current top 13
       trend families (`config.TOP_TREND_FAMILIES`).
 - [ ] Fix the confirmed overfitting (train vs. CV gap +0.131, Step 12):
-      try LightGBM's regularization knobs (`num_leaves`/`max_depth`,
-      `min_data_in_leaf`, `feature_fraction`/`bagging_fraction`,
-      `lambda_l1`/`lambda_l2`) that the Step 7 tuning round scoped out.
+      try LightGBM's regularization knobs (`max_depth`, `min_data_in_leaf`,
+      `feature_fraction`/`bagging_fraction`, `lambda_l1`/`lambda_l2`) that
+      the Step 7 tuning round scoped out. Design documented in
+      `docs/superpowers/specs/2026-07-31-lightgbm-regularization-design.md`;
+      not yet implemented.
