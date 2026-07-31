@@ -83,7 +83,7 @@ def build_lightgbm_calibrated_pipeline(class_weight=None, method="sigmoid", cv=3
     )
 
 
-def build_ensemble_pipeline(class_weight=None, method="sigmoid", cv=3):
+def build_ensemble_pipeline(class_weight=None, method="sigmoid", cv=3, weights=None):
     """
     Simple soft-voting average of calibrated LightGBM + calibrated XGBoost.
 
@@ -96,6 +96,11 @@ def build_ensemble_pipeline(class_weight=None, method="sigmoid", cv=3):
     computes a plain average of predict_proba across estimators (sklearn
     docs -- Voting Classifier, RESOURCES.md) -- matches the "simple
     average of probabilities" approach decided for this round.
+
+    An optional `weights=[lgbm_weight, xgb_weight]` shifts the average
+    toward one model -- see config.TUNED_ENSEMBLE_WEIGHTS (if adopted) or
+    the negative-result note in README.md for the grid search that
+    validated this.
 
     XGBoost uses library defaults (no tuning yet) -- consistent with how
     LightGBM was first evaluated before a separate tuning round.
@@ -111,4 +116,4 @@ def build_ensemble_pipeline(class_weight=None, method="sigmoid", cv=3):
         method=method,
         cv=cv,
     )
-    return VotingClassifier(estimators=[("lgbm", lgbm), ("xgb", xgb)], voting="soft")
+    return VotingClassifier(estimators=[("lgbm", lgbm), ("xgb", xgb)], voting="soft", weights=weights)
