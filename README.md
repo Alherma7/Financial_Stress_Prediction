@@ -134,6 +134,17 @@ EDA and feature engineering steps done so far live in
   tuning has converged on these 3 parameters; further gains likely need
   `class_weight="balanced"`, model ensembling (LightGBM + XGBoost, see
   RESOURCES.md), or more feature engineering, not more tuning.
+- Tried `class_weight="balanced"` on the tuned LightGBM pipeline
+  (`notebooks/01_eda_trends.ipynb` Step 8 — source: scikit-learn glossary
+  `class_weight`, see `RESOURCES.md`; design in
+  `docs/superpowers/specs/2026-07-31-lightgbm-class-weight-balanced-design.md`).
+  Result: combined score 0.21061 ± 0.00376 (Log Loss 0.27371 ± 0.00345,
+  ROC-AUC 0.88403 ± 0.00428) vs. the documented baseline 0.20752 ± 0.00332
+  (Log Loss 0.27039 ± 0.00291, ROC-AUC 0.88677 ± 0.00402) — worse on both
+  Log Loss and ROC-AUC (though the delta is smaller than one standard
+  deviation of noise), so **not adopted**; `src/train.py` keeps
+  `class_weight=None`. Next candidates: ensembling LightGBM + XGBoost, or
+  further feature engineering (see `RESOURCES.md`).
 
 ## Next steps (pending)
 

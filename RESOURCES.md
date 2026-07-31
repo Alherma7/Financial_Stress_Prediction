@@ -46,6 +46,29 @@ All links were verified as accessible on 2026-07-28.
   methods and the `cv` parameter (internal CV split used to fit the calibrator) — used
   directly in `src/model.py::build_lightgbm_calibrated_pipeline()`.
 
+- **scikit-learn glossary — `class_weight`**
+  https://scikit-learn.org/stable/glossary.html#term-class_weight
+  Why: defines the `"balanced"` mode's exact mechanism —
+  `n_samples / (n_classes * np.bincount(y))` — i.e. each sample is
+  weighted inversely proportional to its class's frequency, so both
+  classes contribute equal total weight to the loss (linear models) or
+  split criterion (trees). Directly justifies passing
+  `class_weight="balanced"` to `model.build_lightgbm_pipeline()` /
+  `build_lightgbm_calibrated_pipeline()` as a correction for this
+  dataset's ~15% positive rate.
+
+- **Zewen Liu, "The Hidden Cost of Resampling: How Imbalance Correction
+  Degrades Probability Calibration in Tree Ensembles"** (arXiv 2606.29720)
+  https://arxiv.org/abs/2606.29720
+  Why: studies how resampling techniques (SMOTE, under/over-sampling)
+  degrade probability calibration in tree ensembles — SMOTE's cost is
+  modest, undersampling's is worse and grows with imbalance severity;
+  recommends post-hoc recalibration after resampling. Note: this paper
+  does **not** compare class weighting to resampling directly — it's
+  cited here only as the reason to check Log Loss (not just ROC-AUC) when
+  applying *any* imbalance-correction technique, consistent with this
+  project's existing improve-on-both-metrics gate.
+
 ## Comparable competitions (Kaggle) and what they offer
 
 Same type of problem: time-windowed customer features + financial risk target
@@ -88,3 +111,4 @@ Same type of problem: time-windowed customer features + financial risk target
 | LightGBM/XGBoost ensembles | `src/model.py::build_lightgbm_pipeline()` (done — now the default model in `src/train.py`, combined score 0.310 -> 0.226) |
 | Probability calibration (Niculescu-Mizil & Caruana; sklearn docs) | `src/model.py::build_lightgbm_calibrated_pipeline()` |
 | Stratified K-Fold | Replace the single split in `src/train.py` |
+| `class_weight="balanced"` (sklearn glossary; calibration risk per Liu 2026) | `src/model.py::build_lightgbm_pipeline()` / `build_lightgbm_calibrated_pipeline()` |
