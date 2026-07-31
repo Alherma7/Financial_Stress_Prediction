@@ -69,6 +69,13 @@ All links were verified as accessible on 2026-07-28.
   applying *any* imbalance-correction technique, consistent with this
   project's existing improve-on-both-metrics gate.
 
+- **scikit-learn docs — Voting Classifier**
+  https://scikit-learn.org/stable/modules/ensemble.html#voting-classifier
+  Why: confirms `VotingClassifier(voting="soft")` with `weights=None`
+  (default) computes a plain average of each classifier's predicted
+  probabilities — the exact "simple average of probabilities" mechanism
+  used in `model.build_ensemble_pipeline()`.
+
 ## Comparable competitions (Kaggle) and what they offer
 
 Same type of problem: time-windowed customer features + financial risk target
@@ -112,3 +119,4 @@ Same type of problem: time-windowed customer features + financial risk target
 | Probability calibration (Niculescu-Mizil & Caruana; sklearn docs) | `src/model.py::build_lightgbm_calibrated_pipeline()` |
 | Stratified K-Fold | Replace the single split in `src/train.py` |
 | `class_weight="balanced"` (sklearn glossary; calibration risk per Liu 2026) | `src/model.py::build_lightgbm_pipeline()` / `build_lightgbm_calibrated_pipeline()` |
+| Soft-voting ensemble (sklearn Voting Classifier docs) | `src/model.py::build_ensemble_pipeline()` |

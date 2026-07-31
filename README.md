@@ -145,6 +145,25 @@ EDA and feature engineering steps done so far live in
   deviation of noise), so **not adopted**; `src/train.py` keeps
   `class_weight=None`. Next candidates: ensembling LightGBM + XGBoost, or
   further feature engineering (see `RESOURCES.md`).
+- Tried a soft-voting ensemble of the tuned LightGBM pipeline and a
+  calibrated XGBoost model with library defaults
+  (`notebooks/01_eda_trends.ipynb` Step 9 — sources: Amex/Home Credit
+  ensembling writeups, Niculescu-Mizil & Caruana, scikit-learn Voting
+  Classifier docs, all in `RESOURCES.md`; design in
+  `docs/superpowers/specs/2026-07-31-lgbm-xgboost-ensemble-design.md`).
+  Result: combined score 0.21489 ± 0.00330 (Log Loss 0.28115 ± 0.00277,
+  ROC-AUC 0.88448 ± 0.00443) vs. the documented baseline 0.20752 ±
+  0.00332 (Log Loss 0.27039 ± 0.00291, ROC-AUC 0.88677 ± 0.00402) —
+  worse on both Log Loss and ROC-AUC, by a larger margin than either
+  round's noise band (about 2x the standard deviation, unlike the
+  `class_weight` round) — so **not adopted**; `src/train.py` keeps the
+  single tuned LightGBM pipeline. Likely cause: an unweighted 50/50
+  average with an untuned XGBoost drags the ensemble toward the weaker
+  model. Untried variants deferred for a future round: weighting the
+  vote toward LightGBM, or tuning XGBoost before ensembling (see
+  `docs/superpowers/specs/2026-07-31-lgbm-xgboost-ensemble-design.md`
+  "Out of scope"); feature engineering (customer-profile interactions,
+  remaining 16 trend families) is also still untried.
 
 ## Next steps (pending)
 
