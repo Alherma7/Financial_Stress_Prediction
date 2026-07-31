@@ -200,6 +200,24 @@ EDA and feature engineering steps done so far live in
   off at any ratio tried. Remaining untried candidates: tuning XGBoost's
   hyperparameters before ensembling, or further feature engineering
   (customer-profile interactions, remaining 16 trend families).
+- Checked the tuned LightGBM pipeline for overfitting
+  (`notebooks/01_eda_trends.ipynb` Step 12 — source: Abhishek Thakur,
+  *Approaching (Almost) Any Machine Learning Problem*, see
+  `RESOURCES.md`): for each of the same 5 CV folds, scored the fitted
+  pipeline on its own training fold in addition to its validation fold.
+  Result: mean train combined score **0.07672** vs. mean val **0.20752**
+  (per-fold gap +0.125 to +0.136, consistent across all 5 folds — not
+  noise). **Confirms significant overfitting** — the model nearly
+  memorizes each training fold (train Log Loss/AUC close to a perfect
+  fit) while validation performance matches the already-documented CV
+  number. `config.TUNED_LGBM_PARAMS`'s random search (Step 7) only
+  covered `n_estimators`/`learning_rate`/`num_leaves` and explicitly
+  scoped out regularization knobs (see
+  `docs/superpowers/specs/2026-07-30-lightgbm-hyperparameter-tuning-design.md`
+  "Out of scope") — those are the next candidates to try (LightGBM
+  "Parameters Tuning" docs' "Deal with over-fitting" section, see
+  `RESOURCES.md`: smaller `num_leaves`/`max_depth`, `min_data_in_leaf`,
+  `feature_fraction`/`bagging_fraction`, `lambda_l1`/`lambda_l2`).
 
 ## Next steps (pending)
 
@@ -218,3 +236,7 @@ EDA and feature engineering steps done so far live in
       `num_leaves`) instead of the library defaults.
 - [x] Explore additional feature engineering beyond the current top 13
       trend families (`config.TOP_TREND_FAMILIES`).
+- [ ] Fix the confirmed overfitting (train vs. CV gap +0.131, Step 12):
+      try LightGBM's regularization knobs (`num_leaves`/`max_depth`,
+      `min_data_in_leaf`, `feature_fraction`/`bagging_fraction`,
+      `lambda_l1`/`lambda_l2`) that the Step 7 tuning round scoped out.

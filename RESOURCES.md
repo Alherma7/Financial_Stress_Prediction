@@ -76,6 +76,26 @@ All links were verified as accessible on 2026-07-28.
   probabilities — the exact "simple average of probabilities" mechanism
   used in `model.build_ensemble_pipeline()`.
 
+- **LightGBM official docs — Parameters Tuning**
+  https://lightgbm.readthedocs.io/en/latest/Parameters-Tuning.html
+  Why: describes the `num_leaves`/`learning_rate`/`num_iterations`
+  trade-offs used to design the Step 7 random search
+  (`config.TUNED_LGBM_PARAMS`). Its "Deal with over-fitting" section also
+  lists the regularization knobs that round explicitly left untuned
+  (smaller `num_leaves`/`max_depth`, `min_data_in_leaf`,
+  `feature_fraction`/`bagging_fraction`, `lambda_l1`/`lambda_l2`,
+  more training data) — the candidates for fixing the overfitting
+  confirmed in `notebooks/01_eda_trends.ipynb` Step 12 (train vs. CV gap
+  +0.131).
+
+- **Bergstra & Bengio, "Random Search for Hyper-Parameter Optimization"**
+  (JMLR 2012) https://www.jmlr.org/papers/v13/bergstra12a.html
+  Why: shows random search matches or beats grid search for the same
+  compute budget, since only a subset of hyperparameters matters per
+  dataset and that subset varies — justifies random search (rather than
+  an exhaustive grid) for both the LightGBM (Step 7) and XGBoost (Step 11)
+  hyperparameter tuning rounds.
+
 - **XGBoost official docs — Notes on Parameter Tuning**
   https://xgboost.readthedocs.io/en/stable/tutorials/param_tuning.html
   Why: identifies `max_depth`, `min_child_weight`, `gamma` as the primary
