@@ -81,3 +81,34 @@ def build_lightgbm_calibrated_pipeline(class_weight=None, method="sigmoid", cv=3
         method=method,
         cv=cv,
     )
+
+
+def build_ensemble_pipeline(class_weight=None, method="sigmoid", cv=3):
+    """
+    Simple soft-voting average of calibrated LightGBM + calibrated XGBoost.
+
+    Source: LightGBM/XGBoost ensembles were the winning approach in the
+    Amex Default Prediction and Home Credit Default Risk competitions (see
+    RESOURCES.md). XGBoost is calibrated the same way as LightGBM
+    (Niculescu-Mizil & Caruana, ICML 2005 -- boosted trees in general push
+    probability mass away from 0/1) so both inputs to the vote are
+    comparably calibrated. VotingClassifier(voting="soft", weights=None)
+    computes a plain average of predict_proba across estimators (sklearn
+    docs -- Voting Classifier, RESOURCES.md) -- matches the "simple
+    average of probabilities" approach decided for this round.
+
+    XGBoost uses library defaults (no tuning yet) -- consistent with how
+    LightGBM was first evaluated before a separate tuning round.
+    """
+    from xgboost import XGBClassifier
+    from sklearn.ensemble import VotingClassifier
+
+    lgbm = build_lightgbm_calibrated_pipeline(
+        class_weight=class_weight, method=method, cv=cv, **config.TUNED_LGBM_PARAMS
+    )
+    xgb = CalibratedClassifierCV(
+        estimator=XGBClassifier(random_state=config.RANDOM_STATE),
+        method=method,
+        cv=cv,
+    )
+    return VotingClassifier(estimators=[("lgbm", lgbm), ("xgb", xgb)], voting="soft")
