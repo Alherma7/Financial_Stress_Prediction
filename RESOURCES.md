@@ -76,6 +76,17 @@ All links were verified as accessible on 2026-07-28.
   probabilities — the exact "simple average of probabilities" mechanism
   used in `model.build_ensemble_pipeline()`.
 
+- **XGBoost official docs — Notes on Parameter Tuning**
+  https://xgboost.readthedocs.io/en/stable/tutorials/param_tuning.html
+  Why: identifies `max_depth`, `min_child_weight`, `gamma` as the primary
+  model-complexity/overfitting controls, `subsample`/`colsample_bytree` as
+  randomness-based regularization, and the `eta` (`learning_rate`) vs
+  `num_round` (`n_estimators`) trade-off -- the same trade-off already
+  tuned for LightGBM. Justifies tuning `n_estimators`, `learning_rate`,
+  `max_depth` for XGBoost via random search
+  (`model.build_xgboost_calibrated_pipeline()`), analogous to
+  `config.TUNED_LGBM_PARAMS`.
+
 ## Comparable competitions (Kaggle) and what they offer
 
 Same type of problem: time-windowed customer features + financial risk target
@@ -120,3 +131,4 @@ Same type of problem: time-windowed customer features + financial risk target
 | Stratified K-Fold | Replace the single split in `src/train.py` |
 | `class_weight="balanced"` (sklearn glossary; calibration risk per Liu 2026) | `src/model.py::build_lightgbm_pipeline()` / `build_lightgbm_calibrated_pipeline()` |
 | Soft-voting ensemble (sklearn Voting Classifier docs) | `src/model.py::build_ensemble_pipeline()` |
+| XGBoost tuning knobs (official XGBoost Parameter Tuning docs) | `src/model.py::build_xgboost_calibrated_pipeline()` |
