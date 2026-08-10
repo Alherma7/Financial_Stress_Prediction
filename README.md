@@ -219,6 +219,62 @@ EDA and feature engineering steps done so far live in
   `RESOURCES.md`: smaller `num_leaves`/`max_depth`, `min_data_in_leaf`,
   `feature_fraction`/`bagging_fraction`, `lambda_l1`/`lambda_l2`).
 
+- Tried regularization tuning to close the Step 12 overfitting gap
+  (`notebooks/01_eda_trends.ipynb` Step 13 -- random search over
+  `min_data_in_leaf`, `feature_fraction`, `bagging_fraction`/
+  `bagging_freq`, `lambda_l1`, `lambda_l2`, with `n_estimators`/
+  `learning_rate`/`num_leaves` fixed at `config.TUNED_LGBM_PARAMS`;
+  sources: LightGBM "Parameters Tuning" docs "Deal with over-fitting"
+  section, Bergstra & Bengio JMLR 2012, Abhishek Thakur -- all in
+  `RESOURCES.md`; design in
+  `docs/superpowers/specs/2026-07-31-lightgbm-regularization-design.md`).
+  Same-run baseline (library defaults for these knobs): val combined
+  score 0.20763, train combined score 0.07674, gap +0.13089 -- matches
+  the already-documented Step 12 numbers. Stopped early by the user after
+  13 of 20 trials: every trial fell into one of two failing patterns, and
+  none cleared the gate (both hold/improve the val score **and**
+  meaningfully shrink the gap). Most trials (e.g. Trial 2: val 0.21153,
+  gap +0.12806; Trial 10: val 0.21321, gap +0.12426) validated worse than
+  baseline while the gap barely moved. The trial with the largest gap
+  reduction, Trial 9 (gap +0.10928, down ~0.022 from baseline), did so by
+  validating clearly worse (val 0.21116) and pushing train score up to
+  0.10188 -- regularizing into underfitting rather than closing the gap
+  productively, exactly the failure mode the design doc's gate was
+  written to reject. The single trial with a (marginally) better val
+  score, Trial 5 (val 0.20722), only reduced the gap by ~0.005 -- smaller
+  than the +0.011 fold-to-fold spread already seen in Step 12, i.e. not a
+  meaningful reduction. **Not adopted**; `src/train.py` keeps
+  `config.TUNED_LGBM_PARAMS` unchanged, `src/model.py`'s new
+  `min_data_in_leaf`/`feature_fraction`/`bagging_fraction`/
+  `bagging_freq`/`lambda_l1`/`lambda_l2` parameters stay at their library
+  defaults for the production pipeline (added to `build_lightgbm_pipeline()`/
+  `build_lightgbm_calibrated_pipeline()` to make this round possible, kept
+  for future experiments). Conclusion: regularizing the existing feature
+  set trades val score for train score along a fixed frontier without
+  closing the gap -- the overfitting isn't primarily a "model has too much
+  capacity for these features" problem, so the next candidate is changing
+  what the model is fed rather than how much it's allowed to fit it.
+  Deferred alternatives if this pattern recurs: feature reduction/
+  selection, or early stopping via a held-out eval set (needs pipeline
+  changes beyond this round).
+
+- Added `segment` (HVC/LVC/MVC) x top trend family interaction features
+  (`notebooks/01_eda_trends.ipynb` Step 14 -- source: Zheng & Casari,
+  "Feature Engineering for Machine Learning", same interaction-feature
+  technique already used for `build_net_flow_features()`; design in
+  `docs/superpowers/specs/2026-08-10-segment-trend-interaction-design.md`).
+  `features.build_segment_interaction_features()` multiplies each of the
+  13 top trend families' `delta_m1_m6` by each of the 3 `segment`
+  indicators (39 new columns). Same-run baseline (current production
+  features): combined score 0.20763 (Log Loss 0.27051, ROC-AUC 0.88668).
+  With interaction features: combined score **0.20755** (Log Loss
+  **0.27036**, ROC-AUC 0.88668, held) -- improved Log Loss, held ROC-AUC,
+  so **adopted** (margin is smaller than one standard deviation of CV
+  noise, but per this project's gate, holding/improving on both metrics
+  is what matters, not the size of the delta). Wired into
+  `features.build_production_features()`, so `src/train.py` picks it up
+  automatically. Production feature count: 319 columns (up from 280).
+
 ## Next steps (pending)
 
 - [x] Inspect the actual columns in `Train.csv` (confirm the monthly
@@ -236,9 +292,10 @@ EDA and feature engineering steps done so far live in
       `num_leaves`) instead of the library defaults.
 - [x] Explore additional feature engineering beyond the current top 13
       trend families (`config.TOP_TREND_FAMILIES`).
-- [ ] Fix the confirmed overfitting (train vs. CV gap +0.131, Step 12):
-      try LightGBM's regularization knobs (`max_depth`, `min_data_in_leaf`,
-      `feature_fraction`/`bagging_fraction`, `lambda_l1`/`lambda_l2`) that
-      the Step 7 tuning round scoped out. Design documented in
-      `docs/superpowers/specs/2026-07-31-lightgbm-regularization-design.md`;
-      not yet implemented.
+- [x] Fix the confirmed overfitting (train vs. CV gap +0.131, Step 12):
+      tried LightGBM's regularization knobs (Step 13) -- no trial closed
+      the gap without giving up val score. **Not adopted** (5th rejected
+      experiment); see Progress log above.
+- [x] Feature engineering: `segment` (HVC/LVC/MVC) x top trend family
+      interaction features. Combined score 0.20763 -> **0.20755**.
+      **Adopted** -- see Progress log above.

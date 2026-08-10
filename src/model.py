@@ -33,7 +33,9 @@ def build_logreg_pipeline(class_weight=None):
     ])
 
 
-def build_lightgbm_pipeline(class_weight=None, n_estimators=100, learning_rate=0.1, num_leaves=31):
+def build_lightgbm_pipeline(class_weight=None, n_estimators=100, learning_rate=0.1, num_leaves=31,
+                             min_data_in_leaf=20, feature_fraction=1.0, bagging_fraction=1.0,
+                             bagging_freq=0, lambda_l1=0.0, lambda_l2=0.0):
     """
     LightGBM baseline, as an alternative to Logistic Regression.
 
@@ -46,7 +48,14 @@ def build_lightgbm_pipeline(class_weight=None, n_estimators=100, learning_rate=0
     n_estimators/learning_rate/num_leaves default to LightGBM's own library
     defaults. See config.TUBED_LGBM_PARAMS for the values chosen by random
     search (LightGBM docs "Parameters Tuning"; Bergstra & Bengio, JMLR 2012
-    -- see RESOURCES.md). 
+    -- see RESOURCES.md).
+
+    min_data_in_leaf/feature_fraction/bagging_fraction/bagging_freq/
+    lambda_l1/lambda_l2 are LightGBM's overfitting-control knobs (LightGBM
+    docs "Parameters Tuning", "Deal with over-fitting" section -- see
+    RESOURCES.md), left at their library defaults here so existing callers
+    are unaffected; see the Step 13 regularization search in
+    notebooks/01_eda_trends.ipynb for tuned values.
     """
     from lightgbm import LGBMClassifier
 
@@ -55,14 +64,23 @@ def build_lightgbm_pipeline(class_weight=None, n_estimators=100, learning_rate=0
         n_estimators=n_estimators,
         learning_rate=learning_rate,
         num_leaves=num_leaves,
+        min_data_in_leaf=min_data_in_leaf,
+        feature_fraction=feature_fraction,
+        bagging_fraction=bagging_fraction,
+        bagging_freq=bagging_freq,
+        lambda_l1=lambda_l1,
+        lambda_l2=lambda_l2,
         random_state=config.RANDOM_STATE,
         verbose=-1,
     )
 
 def build_lightgbm_calibrated_pipeline(class_weight=None, method="sigmoid", cv=3,
-                                       n_estimators=100, learning_rate=0.1, num_leaves=31):
+                                       n_estimators=100, learning_rate=0.1, num_leaves=31,
+                                       min_data_in_leaf=20, feature_fraction=1.0,
+                                       bagging_fraction=1.0, bagging_freq=0,
+                                       lambda_l1=0.0, lambda_l2=0.0):
     """
-    LightGBM wrapped in probability calibration. 
+    LightGBM wrapped in probability calibration.
 
     Source: Niculescu-Mizil & Caruana, "Predicting Good Probabilities with
     Supervised Learning" (ICML 2005) -- shows boosted trees push probability
@@ -77,6 +95,12 @@ def build_lightgbm_calibrated_pipeline(class_weight=None, method="sigmoid", cv=3
             n_estimators=n_estimators,
             learning_rate=learning_rate,
             num_leaves=num_leaves,
+            min_data_in_leaf=min_data_in_leaf,
+            feature_fraction=feature_fraction,
+            bagging_fraction=bagging_fraction,
+            bagging_freq=bagging_freq,
+            lambda_l1=lambda_l1,
+            lambda_l2=lambda_l2,
             ),
         method=method,
         cv=cv,

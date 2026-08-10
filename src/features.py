@@ -114,14 +114,22 @@ def build_monthly_trend_features(df: pd.DataFrame, families: list, monthly_prefi
 def build_production_features(train_df: pd.DataFrame, test_df: pd.DataFrame):
     """
     The current production feature set: one-hot encoding + the top trend
-    families (config.TOP_TREND_FAMILIES), imputed with the train median.
+    families (config.TOP_TREND_FAMILIES) + segment x trend interaction
+    features, imputed with the train median.
 
     Combines encode_features() + build_monthly_trend_features() +
-    impute_missing() -- the same three-step sequence used by both
-    src/train.py and the notebook's validation cells -- so that sequence
-    only needs to be written once. Callers who only need train features
-    (e.g. a notebook cell scoring `train` alone) can pass `test_df` anyway
-    and ignore the second return value.
+    build_segment_interaction_features() + impute_missing() -- the same
+    sequence used by both src/train.py and the notebook's validation
+    cells -- so that sequence only needs to be written once. Callers who
+    only need train features (e.g. a notebook cell scoring `train` alone)
+    can pass `test_df` anyway and ignore the second return value.
+
+    Segment interaction features validated in
+    notebooks/01_eda_trends.ipynb Step 14 (see
+    docs/superpowers/specs/2026-08-10-segment-trend-interaction-design.md):
+    combined score 0.20763 -> 0.20755 (Log Loss 0.27051 -> 0.27036, ROC-AUC
+    held at 0.88668) -- improved/held on both metrics vs. the same-run
+    baseline, so adopted.
     """
     feature_cols = get_feature_columns(train_df, config.ID_COL, config.TARGET)
     X_encoded, test_encoded = encode_features(train_df, test_df, feature_cols)
@@ -130,6 +138,11 @@ def build_production_features(train_df: pd.DataFrame, test_df: pd.DataFrame):
     trend_test = build_monthly_trend_features(test_df, config.TOP_TREND_FAMILIES)
     X_encoded = pd.concat([X_encoded, trend_train], axis=1)
     test_encoded = pd.concat([test_encoded, trend_test], axis=1)
+
+    interaction_train = build_segment_interaction_features(train_df, config.TOP_TREND_FAMILIES)
+    interaction_test = build_segment_interaction_features(test_df, config.TOP_TREND_FAMILIES)
+    X_encoded = pd.concat([X_encoded, interaction_train], axis=1)
+    test_encoded = pd.concat([test_encoded, interaction_test], axis=1)
 
     return impute_missing(X_encoded, test_encoded)
 
@@ -156,3 +169,36 @@ def build_net_flow_features(df: pd.DataFrame, monthly_prefixes=("m1","m2","m3","
 
     stats = _trend_stats(monthly_net_flow, monthly_prefixes)
     return pd.DataFrame({f"net_flow_{name}": series for name, series in stats.items()}, index=df.index)
+
+
+def build_segment_interaction_features(df: pd.DataFrame, families: list, segment_col: str = "segment",
+                                        monthly_prefixes=("m1", "m2", "m3", "m4", "m5", "m6")) -> pd.DataFrame:
+    """
+    Interaction features between `segment` (customer value tier: HVC/LVC/MVC)
+    and each family's `delta_m1_m6` trend feature: segment indicator x delta,
+    isolating whether a family's trend means something different per segment
+    (e.g. a daily_avg_bal drop for an HVC customer vs. an MVC customer).
+
+    Source: Zheng & Casari, "Feature Engineering for Machine Learning" (see
+    RESOURCES.md) -- same interaction-feature technique already used for
+    build_net_flow_features(), applied here to a categorical x numeric pair
+    instead of numeric x numeric. `segment` was picked as the strongest
+    untapped categorical signal in the dataset (see
+    docs/superpowers/specs/2026-08-10-segment-trend-interaction-design.md).
+
+    Uses the full 3-category one-hot of `segment` (no drop_first), built
+    directly from the raw column rather than reused from encode_features()
+    -- that function's drop_first=True is about avoiding collinearity in
+    the base feature set, which doesn't apply to interaction terms, and
+    reusing it would make this depend on encode_features()'s
+    alphabetically-determined choice of which category to drop.
+    """
+    segment_dummies = pd.get_dummies(df[segment_col], prefix=segment_col)
+
+    interaction_df = pd.DataFrame(index=df.index)
+    for fam in families:
+        cols = [f"{m}_{fam}" for m in monthly_prefixes]
+        delta = df[cols[0]] - df[cols[-1]]  # most recent - oldest, same as _trend_stats' delta_m1_m6
+        for segment_name in segment_dummies.columns:
+            interaction_df[f"{fam}_delta_m1_m6_x_{segment_name}"] = delta * segment_dummies[segment_name]
+    return interaction_df
