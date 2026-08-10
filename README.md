@@ -59,6 +59,48 @@ Final score = 0.6 × Log Loss + 0.4 × ROC-AUC (see details in
 Books, comparable Kaggle competitions, and reference repos used to define
 the feature engineering and modeling approach: see [`RESOURCES.md`](RESOURCES.md).
 
+## Final result (project closed 2026-08-10)
+
+Closed after diminishing returns: five of the last six experiments
+(regularization tuning, both ensemble variants, XGBoost tuning,
+`class_weight="balanced"`) were rejected, and the one that did land
+(`segment` x trend interactions) moved the combined score by less than
+one standard deviation of CV noise. Further iteration isn't worth the
+cost/benefit at this point -- see "Ideas not pursued" below for what's
+left on the table if this is revisited.
+
+Final production pipeline: `model.build_lightgbm_calibrated_pipeline()`
++ `config.TUNED_LGBM_PARAMS` on `features.build_production_features()`'s
+319-column feature set (one-hot + top-13 trend families + segment x
+trend interactions). Reproduced via `python -m src.train`:
+
+- **Combined score: 0.20755 ± 0.00402** (Log Loss 0.27036 ± 0.00365,
+  ROC-AUC 0.88668 ± 0.00466), 5-fold stratified CV.
+- Final submission: `submissions/submission.csv` (30,000 rows, `ID` +
+  `Target`, no nulls), generated from the model refit on 100% of
+  `Train.csv`.
+- Known limitation, not resolved: the train-vs-CV combined score gap is
+  still ~+0.13 (Step 12/13) -- the model overfits each training fold
+  significantly, but neither regularization (Step 13) nor the feature
+  changes since have closed it. Doesn't block submission quality (CV
+  score is still the relevant estimate of held-out performance), but
+  would be the first thing to revisit if this project resumes.
+
+### Ideas not pursued
+
+Documented for a future session, in priority order (see project memory /
+`docs/superpowers/specs/2026-08-10-segment-trend-interaction-design.md`
+"Out of scope" for full rationale):
+
+1. Expand `segment` interactions beyond `delta_m1_m6` to the other
+   `_trend_stats()` outputs (mean_6m, std_6m, ratio_m1_mean, etc.).
+2. `region` x trend interactions (weaker standalone signal than
+   `segment`, same technique).
+3. Feature reduction/selection, or early stopping via a held-out eval
+   set, to actually address the unresolved overfitting gap.
+4. Seed ensembling (variance reduction, not an overfitting fix -- lower
+   priority than the above).
+
 ## Progress
 
 EDA and feature engineering steps done so far live in
@@ -275,7 +317,7 @@ EDA and feature engineering steps done so far live in
   `features.build_production_features()`, so `src/train.py` picks it up
   automatically. Production feature count: 319 columns (up from 280).
 
-## Next steps (pending)
+## Next steps (closed -- see "Ideas not pursued" above for anything remaining)
 
 - [x] Inspect the actual columns in `Train.csv` (confirm the monthly
       m1_...m6_ prefixes) and implement `build_monthly_trend_features()`
